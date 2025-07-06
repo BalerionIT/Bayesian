@@ -1,0 +1,237 @@
+---
+title: "Group 5 - Binary Logistic Regression"
+author: "Akash Mittal; Antonella, Xaver"
+date: "2024-06-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Loading the dataset
+```{r}
+library(readr)
+
+Test <- read_csv("C:/Users/Akash Mittal/Documents/GitHub/BayesianAnalysis/Assessment/Group_5/Test.csv")
+
+```
+
+```{r}
+df <- Test
+str(df)
+
+df$senility <- as.factor(df$senility)
+```
+
+```{r}
+library(ggplot2)
+
+# Plot of Number of Elderly People in Wais Categories
+plot1 <- ggplot(data=Test, aes(x=wais,fill=as.factor(wais))) + labs(x = "Wais Score" , y = "Number of Elderly People", title = "Frequency Distribution of Elderly People")
+rainbow_colors <- rainbow(20)
+# Print the Plot
+plot1 + geom_bar() + scale_fill_manual(values = rainbow_colors) + theme_minimal() + theme(plot.title = element_text(hjust = 0.5)) + theme(legend.position = "none")
+
+
+# Plot of Number of Elderly People in Wais Categories
+plot2 <- ggplot(data=Test, aes(x=senility, fill=senility)) + labs(x = "Senility" , y = "Number of Elderly People" , title = "Frequency Distribution of Elderly People vs Senility", fill = "Senility")
+
+plot2 + geom_bar() + scale_fill_manual(values = c("Yes" = "lightblue2", "No" = "lightgreen")) + theme_minimal() + theme(plot.title = element_text(hjust = 0.5))
+
+
+# Box Plot for Distribution of Elderly People
+
+ggplot(data=Test, aes(x=senility, y=wais, fill = senility)) +
+  geom_boxplot(varwidth = TRUE) + scale_fill_manual(values = c("Yes" = "lightblue2", "No" = "lightgreen")) +
+  labs(x="Senility", y="Number of Elderly People", title = "Box Plot for Distribution of Elderly People", fill = "Senility") +
+  stat_summary(fun = mean,
+               color = "darkblue",
+               geom = "point",
+               shape = 4,
+               size = 4,
+               show.legend = FALSE) +
+  stat_summary(fun = mean, 
+               colour = "darkblue", 
+               geom = "text", 
+               show.legend = FALSE, 
+               vjust = -1.2, 
+               aes(label = round(after_stat(y), digits = 3))) +
+  theme_minimal() + theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+##### Creating a new Variable for category of WAIS Scores
+##### The following are commonly used diagnostic labels together with corresponding numerical limits in terms of IQs and percentages.
+##### IQ	Classification
+##### 130 and above	Very Superior
+##### 120-129	Superior
+##### 110-119	High Average
+##### 90-109	Average
+##### 80-89	Low Average
+##### 70-79	Borderline
+##### 69 and below	Mentally Retarded
+
+```{r}
+
+Test$wais_category <- cut(Test$wais,
+#                          breaks = c(0,69,79,89,109,119,129,Inf),
+                           breaks = c(0, 6, 10, 14, 18, Inf),
+                           labels = c("Very Low", "Low", "Below Average", "Average", "Above Average"),
+                          right = FALSE)
+
+
+str(Test)
+```
+##### Barplot of Distribution of categories
+```{r}
+
+ggplot(data = Test, aes(x = wais_category, fill = senility)) +
+  labs(x = "Wais Category", y = "Count of Elderly People", title = "Distribution of Elderly People in Wais Categories", fill = "Senility") +
+  geom_bar() + scale_fill_manual(values = c("Yes" = "lightblue2", "No" = "lightgreen")) +
+  theme_minimal() + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+##### Fitting the Binary Logistic Model (No Square Terms)
+
+```{r}
+
+m_senility <- glm(df$senility ~ df$wais, data=df, family=binomial(link="logit"))
+
+summary(m_senility)
+
+library(MASS)
+
+confint(m_senility)
+
+
+```
+
+##### Model with Square Terms - [I(df$wais^2)]
+
+```{r}
+
+m_senility1 <- glm(df$senility ~ df$wais + I(df$wais^2), data=df, family=binomial(link="logit"))
+
+summary(m_senility1)
+
+confint(m_senility1)
+
+```
+
+
+##### Comparing AIC(Akaike Information Criterion) values of the two models
+
+```{r}
+
+aic_small_model <- AIC(m_senility)
+aic_large_model <-AIC(m_senility1)
+
+cat("AIC of Small Model : ", aic_small_model,"\n")
+cat("AIC of Large Model : ", aic_large_model)
+```
+##### We see that AIC of small model (m_senility) is less than that of large model (m_senility1), so we finally choose the smaller model.
+
+##### Also calculating the Deviance for the two models.
+
+```{r}
+
+deviance_small_model = pchisq(deviance(m_senility), # Specify the model under consideration
+       df.residual(m_senility), # Specify the model under consideration
+       lower = FALSE)
+
+
+deviance_large_model = pchisq(deviance(m_senility1), # Specify the model under consideration
+       df.residual(m_senility1), # Specify the model under consideration
+       lower = FALSE)
+
+cat("Deviance of Small Model : ",deviance_small_model,"\n")
+cat("Deviance of Large Model : ",deviance_large_model,"\n")
+
+```
+
+##### Test Anova for the two models
+
+```{r}
+## Performing Anova on the two models
+
+anova_results <- anova(m_senility, m_senility1,test = "Chisq")
+
+cat("ANOVA Table:\n")
+anova_results
+
+```
+
+##### Since p-value is greater than 0.05, we do not reject the Null-Hypothesis, and conclude that the small model is better than the Large Model.
+##### Further, we note that the Confidence Interval doesn't include the 0.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
